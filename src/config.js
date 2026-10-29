@@ -26,7 +26,7 @@ export const PLAYER = {
   // Degrees between bullets when bulletCount > 1.
   spreadDeg: 10,
   // Milliseconds of invulnerability after taking contact damage.
-  hitInvulnMs: 350,
+  hitInvulnMs: 500,
 };
 
 export const BULLET = {
