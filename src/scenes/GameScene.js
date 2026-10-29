@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME, ARENA, BULLET, WAVES, PLAYER } from '../config.js';
+import { GAME, ARENA, BULLET, WAVES, PLAYER, UPGRADE } from '../config.js';
 import Player from '../entities/Player.js';
 import Bullet from '../entities/Bullet.js';
 import Enemy from '../entities/Enemy.js';
@@ -8,6 +8,7 @@ import { waveSpawnList } from '../logic/waves.js';
 import { edgeSpawnPoint } from '../logic/spawn.js';
 import { takeDamage, isDead } from '../logic/stats.js';
 import { killPoints, saveHighScore } from '../logic/score.js';
+import { pickUpgradeChoices, applyUpgrade } from '../logic/upgrades.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +25,7 @@ export default class GameScene extends Phaser.Scene {
     this.score = 0;
     this.gameOver = false;
     this.events.on('enemy-killed', this.onEnemyKilled, this);
+    this.events.on('upgrade-chosen', this.onUpgradeChosen, this);
 
     this.drawArena();
 
@@ -54,6 +56,7 @@ export default class GameScene extends Phaser.Scene {
       enemies: () => this.enemies.countActive(true),
       kills: () => this.kills,
       score: () => this.score,
+      stats: () => ({ ...this.player.stats }),
       wave: () => ({ n: this.wave, state: this.waveState, pending: this.pendingSpawns.length }),
     };
 
@@ -102,7 +105,19 @@ export default class GameScene extends Phaser.Scene {
   onWaveCleared() {
     this.waveState = 'cleared';
     this.events.emit('wave-cleared', this.wave);
-    this.time.delayedCall(WAVES.interWaveDelayMs, () => this.startWave(this.wave + 1));
+    this.time.delayedCall(WAVES.interWaveDelayMs, () => {
+      if (this.gameOver) return;
+      const choices = pickUpgradeChoices(this.rng, UPGRADE.choices, this.player.stats);
+      this.scene.launch('Upgrade', { choices, wave: this.wave });
+      this.scene.pause();
+    });
+  }
+
+  onUpgradeChosen(upgrade) {
+    applyUpgrade(this.player.stats, upgrade);
+    this.events.emit('hp-changed', { hp: this.player.stats.hp, maxHp: this.player.stats.maxHp });
+    this.events.emit('stats-changed', { ...this.player.stats });
+    this.time.delayedCall(WAVES.interWaveDelayMs / 2, () => this.startWave(this.wave + 1));
   }
 
   onEnemyKilled({ type, wave }) {
@@ -157,6 +172,7 @@ export default class GameScene extends Phaser.Scene {
   onShutdown() {
     if (this.spawnTimer) this.spawnTimer.remove(false);
     this.events.off('enemy-killed', this.onEnemyKilled, this);
+    this.events.off('upgrade-chosen', this.onUpgradeChosen, this);
     window.__debug = null;
   }
 

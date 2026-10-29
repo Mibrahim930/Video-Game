@@ -3,6 +3,7 @@ import { GAME } from './config.js';
 import BootScene from './scenes/BootScene.js';
 import GameScene from './scenes/GameScene.js';
 import HUDScene from './scenes/HUDScene.js';
+import UpgradeScene from './scenes/UpgradeScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 
 const config = {
@@ -23,7 +24,7 @@ const config = {
       debug: false,
     },
   },
-  scene: [BootScene, GameScene, HUDScene, GameOverScene],
+  scene: [BootScene, GameScene, HUDScene, UpgradeScene, GameOverScene],
 };
 
 const game = new Phaser.Game(config);
