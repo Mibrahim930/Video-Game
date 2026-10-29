@@ -16,6 +16,13 @@
 - `src/entities/` – Arcade sprite subclasses (`Player`, `Enemy`, `Bullet`).
 - `src/audio/sfx.js` – Web Audio beeps, no audio files.
 
+## Scene flow
+Boot (generate textures) → Menu → Game + HUD (parallel) → Upgrade (Game paused) → Game … → GameOver → Game or Menu.
+Game emits: `wave-started`, `wave-cleared`, `enemy-killed`, `hp-changed`, `score-changed`, `stats-changed`, `upgrade-chosen`, `player-died`, `mute-changed`. HUD and Upgrade only listen/emit on `this.scene.get('Game').events`.
+
+## Debug hook
+`window.__game` is the Phaser.Game; while Game runs, `window.__debug` exposes `player()`, `bullets()`, `enemies()`, `kills()`, `score()`, `stats()`, `wave()` for headless checks (Playwright + the preview server).
+
 ## Conventions
 - Scenes talk to each other through `this.events` / `this.scene.get('Game').events`, not direct property pokes.
 - Randomness goes through `src/logic/rng.js` so tests can seed it.
