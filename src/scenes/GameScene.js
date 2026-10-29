@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
-import { GAME, ARENA, COLORS, FONT } from '../config.js';
+import { GAME, ARENA, BULLET } from '../config.js';
+import Player from '../entities/Player.js';
+import Bullet from '../entities/Bullet.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -9,13 +11,23 @@ export default class GameScene extends Phaser.Scene {
   create() {
     this.drawArena();
 
-    this.add
-      .text(GAME.width / 2, GAME.height / 2, 'ARENA SURVIVAL', {
-        fontFamily: FONT.family,
-        fontSize: '40px',
-        color: COLORS.text,
-      })
-      .setOrigin(0.5);
+    this.bullets = this.physics.add.group({
+      classType: Bullet,
+      maxSize: BULLET.poolSize,
+      runChildUpdate: true,
+    });
+
+    this.player = new Player(this, GAME.width / 2, GAME.height / 2, this.bullets);
+
+    // Hook for automated checks.
+    window.__debug = {
+      player: () => ({ x: this.player.x, y: this.player.y, rot: this.player.rotation }),
+      bullets: () => this.bullets.countActive(true),
+    };
+  }
+
+  update(time, delta) {
+    this.player.update(time, delta);
   }
 
   drawArena() {
