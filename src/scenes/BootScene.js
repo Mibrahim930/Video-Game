@@ -15,7 +15,7 @@ export default class BootScene extends Phaser.Scene {
     for (const [name, def] of Object.entries(ENEMIES)) {
       this.makeEnemyTexture(`enemy-${name}`, def.radius, def.color);
     }
-    this.scene.start('Game');
+    this.scene.start('Menu');
   }
 
   makePlayerTexture() {

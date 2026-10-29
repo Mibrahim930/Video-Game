@@ -35,7 +35,7 @@ export default class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const prompt = this.add
-      .text(cx, 420, 'Click or press Space to play again', {
+      .text(cx, 420, 'Click or Space to play again   ·   ESC for menu', {
         fontFamily: FONT.family,
         fontSize: '18px',
         color: COLORS.accent,
@@ -47,6 +47,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.time.delayedCall(400, () => {
       this.input.once('pointerdown', this.restart, this);
       this.input.keyboard.once('keydown-SPACE', this.restart, this);
+      this.input.keyboard.once('keydown-ESC', () => this.scene.start('Menu'));
     });
   }
 

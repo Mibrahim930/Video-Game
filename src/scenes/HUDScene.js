@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME, COLORS, FONT, PLAYER } from '../config.js';
+import { sfx } from '../audio/sfx.js';
 
 /**
  * Overlay scene that runs in parallel with Game and only listens to its events.
@@ -29,12 +30,21 @@ export default class HUDScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0);
 
+    this.muteText = this.add
+      .text(GAME.width - 32, GAME.height - 28, '', { fontFamily: FONT.family, fontSize: '14px', color: COLORS.muted })
+      .setOrigin(1, 1);
+    this.onMuteChanged(sfx.isMuted());
+    this.add
+      .text(32, GAME.height - 28, 'ESC menu', { fontFamily: FONT.family, fontSize: '14px', color: COLORS.muted })
+      .setOrigin(0, 1);
+
     const game = this.scene.get('Game');
     this.gameEvents = game.events;
     this.gameEvents.on('hp-changed', this.onHpChanged, this);
     this.gameEvents.on('wave-started', this.onWaveStarted, this);
     this.gameEvents.on('wave-cleared', this.onWaveCleared, this);
     this.gameEvents.on('score-changed', this.onScoreChanged, this);
+    this.gameEvents.on('mute-changed', this.onMuteChanged, this);
     this.events.once('shutdown', this.onShutdown, this);
 
     this.drawHp();
@@ -45,6 +55,11 @@ export default class HUDScene extends Phaser.Scene {
     this.gameEvents.off('wave-started', this.onWaveStarted, this);
     this.gameEvents.off('wave-cleared', this.onWaveCleared, this);
     this.gameEvents.off('score-changed', this.onScoreChanged, this);
+    this.gameEvents.off('mute-changed', this.onMuteChanged, this);
+  }
+
+  onMuteChanged(muted) {
+    this.muteText.setText(muted ? 'M unmute (muted)' : 'M mute');
   }
 
   onHpChanged({ hp, maxHp }) {
