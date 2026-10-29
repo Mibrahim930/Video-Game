@@ -7,6 +7,7 @@ import { mulberry32 } from '../logic/rng.js';
 import { waveSpawnList } from '../logic/waves.js';
 import { edgeSpawnPoint } from '../logic/spawn.js';
 import { takeDamage, isDead } from '../logic/stats.js';
+import { killPoints, saveHighScore } from '../logic/score.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -20,7 +21,9 @@ export default class GameScene extends Phaser.Scene {
     this.spawnTimer = null;
     this.waveState = 'idle'; // idle | spawning | fighting | cleared
     this.kills = 0;
-    this.events.on('enemy-killed', () => { this.kills += 1; });
+    this.score = 0;
+    this.gameOver = false;
+    this.events.on('enemy-killed', this.onEnemyKilled, this);
 
     this.drawArena();
 
@@ -42,6 +45,7 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.enemies);
 
     this.events.once('shutdown', this.onShutdown, this);
+    this.scene.launch('HUD');
 
     // Hook for automated checks.
     window.__debug = {
@@ -49,6 +53,7 @@ export default class GameScene extends Phaser.Scene {
       bullets: () => this.bullets.countActive(true),
       enemies: () => this.enemies.countActive(true),
       kills: () => this.kills,
+      score: () => this.score,
       wave: () => ({ n: this.wave, state: this.waveState, pending: this.pendingSpawns.length }),
     };
 
@@ -56,6 +61,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    if (this.gameOver) return;
     this.player.update(time, delta);
 
     if (
@@ -99,6 +105,12 @@ export default class GameScene extends Phaser.Scene {
     this.time.delayedCall(WAVES.interWaveDelayMs, () => this.startWave(this.wave + 1));
   }
 
+  onEnemyKilled({ type, wave }) {
+    this.kills += 1;
+    this.score += killPoints(type, wave);
+    this.events.emit('score-changed', this.score);
+  }
+
   // ---- Collisions --------------------------------------------------------
 
   onBulletHitsEnemy(bullet, enemy) {
@@ -115,19 +127,36 @@ export default class GameScene extends Phaser.Scene {
     if (!enemy.active || now < player.invulnUntil) return;
     player.invulnUntil = now + PLAYER.hitInvulnMs;
     takeDamage(player.stats, enemy.def.damage);
-    this.events.emit('player-hit', player.stats.hp);
+    this.events.emit('hp-changed', { hp: player.stats.hp, maxHp: player.stats.maxHp });
     player.setTintFill(0xffffff);
     this.time.delayedCall(80, () => player.clearTint());
 
     if (isDead(player.stats)) {
-      this.events.emit('player-died', { wave: this.wave });
-      this.scene.restart();
+      this.endGame();
     }
+  }
+
+  endGame() {
+    this.gameOver = true;
+    this.physics.pause();
+    if (this.spawnTimer) this.spawnTimer.remove(false);
+    this.player.setVelocity(0, 0);
+    this.player.setTint(0x555555);
+
+    const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+    const { highScore, isNew } = saveHighScore(storage, this.score);
+    const result = { score: this.score, wave: this.wave, highScore, isNew };
+    this.events.emit('player-died', result);
+
+    this.time.delayedCall(600, () => {
+      this.scene.stop('HUD');
+      this.scene.start('GameOver', result);
+    });
   }
 
   onShutdown() {
     if (this.spawnTimer) this.spawnTimer.remove(false);
-    this.events.off('enemy-killed');
+    this.events.off('enemy-killed', this.onEnemyKilled, this);
     window.__debug = null;
   }
 
